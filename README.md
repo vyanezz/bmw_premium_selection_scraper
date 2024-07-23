@@ -1,5 +1,5 @@
 
-# BMW Premium Selection Scraper
+# Premium Selection Scraper
 
 Scraper for pre-owned vehicles at BMW dealerships. The project has been created for purely educational purposes.
 
