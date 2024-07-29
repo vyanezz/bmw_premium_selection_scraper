@@ -1,16 +1,17 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-from email_alert.mail_data import prepareMail
+from email_alert.mail_data import prepare_mail
 from email.mime.text import MIMEText
 import pandas as pd
 import os
+import functions
 
 path = os.path.abspath('data.csv')
-UrlID = {}
-newCar = []
+url_id = {}
+new_car = []
 news = False
-priceChanges = {}
+price_changes = {}
 
 
 def add_ids(new_value):
@@ -24,24 +25,26 @@ def add_ids(new_value):
 
     df_concatenated.to_csv(path, index=False)
 
-def checkPriceChanges(id, priceCar, url, email=None):
+
+def check_price_changes(id, car_price, url, email=None):
     df = pd.read_csv('data.csv')
 
     row1 = df[df['id'] == id]
 
-    csvPrice = row1.iloc[0]['priceCar']
+    csv_price = row1.iloc[0]['car_price']
 
     idx = df.index[df['id'] == id]
 
-    if priceCar != csvPrice:
-        priceChanges[url] = {"previousPrice": csvPrice, "priceCar": priceCar}
-        df.loc[idx, 'priceCar'] = priceCar
+    if car_price != csv_price:
+        price_changes[url] = {"previous_price": csv_price, "car_price": car_price}
+        df.loc[idx, 'car_price'] = car_price
         df.to_csv('data.csv', index=False)
         print(f"New Price changes for {url}")
         if email:
-            changesNot(priceChanges)
+            notify_changes(price_changes)
 
-def scrapeAlert(url, email=None):
+
+def scrape_alert(url, email=None):
     global news
 
     print("Requested URL --> ", url)
@@ -56,7 +59,8 @@ def scrapeAlert(url, email=None):
         script_content = script_tag.string
 
         try:
-            json_data = json.loads(script_content)
+            correct_json = functions.add_commas_to_json_list(script_content)
+            json_data = json.loads(correct_json)
 
             if 'itemListElement' in json_data:
 
@@ -67,74 +71,76 @@ def scrapeAlert(url, email=None):
                     id = url[-9:-1]
                     id = int(id)
 
-                    priceCar = scrapePrices(url)
-                    UrlID[id] = {"url": url, "priceCar": priceCar}
+                    try:
+                        car_price = scrape_prices(url)
+                        url_id[id] = {"url": url, "car_price": car_price}
+                        df_read = pd.read_csv(path)
+                        noNews = df_read['id'].isin([id]).any()
 
-                    df_read = pd.read_csv(path)
-                    noNews = df_read['id'].isin([id]).any()
+                        if not noNews:
+                            news = True
+                            new_value = {"id": id, "url": url, "car_price": car_price}
+                            add_ids(new_value)
+                            new_car.append(url)
+                            print(f'New item found: {id} // {url}// {car_price}')
 
-                    if not noNews:
-                        news = True
-                        new_value = {"id": id, "url": url, "priceCar": priceCar}
-                        add_ids(new_value)
-                        newCar.append(url)
-                        print(f'New item found: {id} // {url}// {priceCar}')
-
-                    else:
-                        checkPriceChanges(id, priceCar, url, email)
-
-
+                        else:
+                            check_price_changes(id, car_price, url, email)
+                    except ValueError as e:
+                        print(f"{e}")
 
         except json.JSONDecodeError as e:
             print(f'Error decoding JSON: {e}')
 
     if news and email:
         body = "News:\n\n"
-        for url in newCar:
+        for url in new_car:
             body += f"- {url}\n\n"
         message = MIMEText(body, 'plain')
         message['Subject'] = "🚗New vehicles avalilable🚗"
-        prepareMail(message)
-        newCar.clear()
+        prepare_mail(message)
+        new_car.clear()
         news = False
         return news
 
-def changesNot(priceChanges):
+
+def notify_changes(price_changes):
     body = "New price changes:\n\n"
-    for url in priceChanges:
-        body += f"- {url}\n\n Previous Price: {priceChanges[url]['previousPrice']}€ New Price: {priceChanges[url]['priceCar']}€\n\n"
+    for url in price_changes:
+        body += f"- {url}\n\n Previous Price: {price_changes[url]['previous_price']}€ New Price: {price_changes[url]['car_price']}€\n\n"
     message = MIMEText(body, 'plain')
     message['Subject'] = "💲New price changes💲"
-    prepareMail(message)
-    priceChanges.clear()
+    prepare_mail(message)
+    price_changes.clear()
     return news
 
-def scrapePrices(url):
+
+def scrape_prices(url):
     responseURL = requests.get(url)
-    soup = BeautifulSoup(responseURL.text, 'html.parser')
+    if responseURL.status_code != 200:
+        raise ValueError(f"Cannot scrape {url}")
+    else:
+        soup = BeautifulSoup(responseURL.text, 'html.parser')
+        car_price = soup.find('div', class_='datePrice')
+        str_price = car_price.find('span').text
+        price = float(str_price[:-2].replace(",", ""))
+        return price
 
-    priceCar = soup.find('div', class_='datePrice')
-    pricestr = priceCar.find('span').text
-    price_str = pricestr[:-2].replace(",", "")
-
-    priceCar = float(price_str)
-
-    return priceCar
 
 def url_constructor(model, motor, price=None, kms=None, email=None):
-    spainUrl = "https://www.bmwpremiumselection.es"
+    spain_url = "https://www.bmwpremiumselection.es"
 
     if price or kms:
 
         params = []
 
         if price:
-            priceParam = f"condicion%5Bprecio_hasta%5D={price}"
-            params.append(priceParam)
+            price_param = f"condicion%5Bprecio_hasta%5D={price}"
+            params.append(price_param)
 
         if kms:
-            kmsParam = f"&condicion%5Bkm_hasta%5D={kms}"
-            params.append(kmsParam)
+            kms_param = f"&condicion%5Bkm_hasta%5D={kms}"
+            params.append(kms_param)
 
         filters = [model, motor]
 
@@ -146,29 +152,29 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
                 captured_filters.append(filter)
 
         for cap in captured_filters:
-            spainUrl += cap
+            spain_url += cap
 
-        firstIteration = True
+        first_iteration = True
 
         for param in params:
-            if firstIteration:
-                firstIteration = False
-                spainUrl += "/?" + param
+            if first_iteration:
+                first_iteration = False
+                spain_url += "/?" + param
             else:
-                spainUrl += "&" + param
+                spain_url += "&" + param
 
-        return scrapeAlert(spainUrl, email)
+        return scrape_alert(spain_url, email)
 
     else:
         filters = [model, motor]
 
-        noErrors = True
+        no_errors = True
 
         for f in filters:
             if len(f) <= 0:
-                noErrors = False
+                no_errors = False
 
-        if noErrors:
+        if no_errors:
             captured_filters = []
 
             for filter in filters:
@@ -177,9 +183,9 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
                     captured_filters.append(filter)
 
             for cap in captured_filters:
-                spainUrl += cap
+                spain_url += cap
 
-            return scrapeAlert(spainUrl, email)
+            return scrape_alert(spain_url, email)
 
         else:
             raise ValueError("Mandatory filters like motor or model cannot be empty")
