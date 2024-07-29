@@ -1,5 +1,5 @@
 
-# Premium Selection Scraper
+# BMW Premium Selection Scraper
 
 Scraper for pre-owned vehicles at BMW dealerships. The project has been created for purely educational purposes.
 
@@ -18,13 +18,13 @@ It also has a function to check price changes.
 - Pytest
 - Python-dotenv
 
-You can install all with:
+Install with:
 ```bash
   pip install -r requirements.txt
 ```
 
 
-You will also need to have a Gmail account or another email provider that allows third-party application access for SMTP configuration.
+Gmail account or another email provider that allows third-party application access for SMTP configuration is needed.
 
 
 
@@ -55,7 +55,7 @@ serie-3,320i,_,_,True
 
 ```
 
-You can set the email value to ```True``` or ```False``` to receive or not receive news alerts.
+The email value can be set to ```True``` or ```False``` to receive or not receive news alerts.
 
 The output data is stored in the ```data.csv``` file where the ```id``` and ```url``` to each vehicle found is filed.
 
