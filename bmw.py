@@ -35,7 +35,9 @@ def check_price_changes(id, car_price, url, email=None):
 
     idx = df.index[df['id'] == id]
 
-    if car_price != csv_price:
+    price_difference = csv_price - car_price
+
+    if price_difference > 0.600 or price_difference < -0.600 and price_difference != 0.0:
         price_changes[url] = {"previous_price": csv_price, "car_price": car_price}
         df.loc[idx, 'car_price'] = car_price
         df.to_csv('data.csv', index=False)
