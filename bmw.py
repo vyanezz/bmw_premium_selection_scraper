@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 import pandas as pd
 import os
 import functions
+import re
 
 path = os.path.abspath('data.csv')
 url_id = {}
@@ -55,44 +56,38 @@ def scrape_alert(url, email=None):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    script_tag = soup.find('script', {'type': 'application/ld+json'})
+    json_data = correct_json(soup)
 
-    if script_tag:
-        script_content = script_tag.string
+    get_pagination_items(url) #Añadir los elementos de paginacion a json_data
 
-        try:
-            correct_json = functions.add_commas_to_json_list(script_content)
-            json_data = json.loads(correct_json)
+    if 'itemListElement' in json_data:
 
-            if 'itemListElement' in json_data:
+        itemListElement = json_data['itemListElement']
 
-                itemListElement = json_data['itemListElement']
+        for item in itemListElement:
+            url = item.get('url', '')
+            print(url)
+            id = url[-9:-1]
+            id = int(id)
 
-                for item in itemListElement:
-                    url = item.get('url', '')
-                    id = url[-9:-1]
-                    id = int(id)
+            try:
+                car_price = scrape_prices(url)
+                url_id[id] = {"url": url, "car_price": car_price}
+                df_read = pd.read_csv(path)
+                noNews = df_read['id'].isin([id]).any()
 
-                    try:
-                        car_price = scrape_prices(url)
-                        url_id[id] = {"url": url, "car_price": car_price}
-                        df_read = pd.read_csv(path)
-                        noNews = df_read['id'].isin([id]).any()
+                if not noNews:
+                    news = True
+                    new_value = {"id": id, "url": url, "car_price": car_price}
+                    add_ids(new_value)
+                    new_car.append(url)
+                    print(f'New item found: {id} // {url}// {car_price}')
 
-                        if not noNews:
-                            news = True
-                            new_value = {"id": id, "url": url, "car_price": car_price}
-                            add_ids(new_value)
-                            new_car.append(url)
-                            print(f'New item found: {id} // {url}// {car_price}')
+                else:
+                    check_price_changes(id, car_price, url, email)
+            except ValueError as e:
+                print(f"{e}")
 
-                        else:
-                            check_price_changes(id, car_price, url, email)
-                    except ValueError as e:
-                        print(f"{e}")
-
-        except json.JSONDecodeError as e:
-            print(f'Error decoding JSON: {e}')
 
     if news and email:
         body = "News:\n\n"
@@ -191,3 +186,38 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
 
         else:
             raise ValueError("Mandatory filters like motor or model cannot be empty")
+
+def correct_json(soup):
+    try:
+        script_tag = soup.find('script', {'type': 'application/ld+json'}).string
+        json_ok = functions.add_commas_to_json_list(script_tag)
+        json_data = json.loads(json_ok)
+        return json_data
+    except json.JSONDecodeError as e:
+        print(f'Error decoding JSON: {e}')
+
+def get_pagination_items(url):
+
+    url = url + '/?pagina=2&ordenacion=fecha_publicacion_descendente'
+
+    indicator = True
+
+    itemListElement = []
+
+    last_response = ''
+
+    while indicator:
+        response = requests.get(url)
+        json_data =  correct_json(BeautifulSoup(response.text, 'html.parser'))
+        item_list = json_data['itemListElement']
+        print("Registered items with pagination --> ", url)
+        if item_list == last_response:
+            indicator = False
+        last_response = item_list
+        url = re.sub(r'=(\d+)', lambda m: f"={int(m.group(1)) + 1}", url)
+
+    return
+
+
+
+
