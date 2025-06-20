@@ -1,4 +1,4 @@
-requests~=2.31.0
+requests
 pandas~=2.1.4
 beautifulsoup4~=4.12.2
 pytest~=7.4.2
