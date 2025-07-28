@@ -1,3 +1,4 @@
+from config import logo
 from bmw import url_constructor
 import pandas as pd
 
@@ -13,4 +14,7 @@ def main():
 
 
 if __name__ == "__main__":
+    logo.print_bmw_ascii_with_small_by()
     main()
+
+

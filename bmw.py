@@ -58,13 +58,13 @@ def scrape_alert(url, email=None):
 
     json_data = correct_json(soup)
 
-    get_pagination_items(url) #Añadir los elementos de paginacion a json_data
+    if json_data:
 
-    if 'itemListElement' in json_data:
+        more_items = get_pagination_items(url, json_data)
 
-        itemListElement = json_data['itemListElement']
+        item_list = json_data + more_items
 
-        for item in itemListElement:
+        for item in item_list:
             url = item.get('url', '')
             print(url)
             id = url[-9:-1]
@@ -192,11 +192,11 @@ def correct_json(soup):
         script_tag = soup.find('script', {'type': 'application/ld+json'}).string
         json_ok = functions.add_commas_to_json_list(script_tag)
         json_data = json.loads(json_ok)
-        return json_data
+        return json_data['itemListElement']
     except json.JSONDecodeError as e:
         print(f'Error decoding JSON: {e}')
 
-def get_pagination_items(url):
+def get_pagination_items(url, first_result):
 
     url = url + '/?pagina=2&ordenacion=fecha_publicacion_descendente'
 
@@ -204,19 +204,22 @@ def get_pagination_items(url):
 
     itemListElement = []
 
-    last_response = ''
+    last_response = first_result
 
     while indicator:
         response = requests.get(url)
         json_data =  correct_json(BeautifulSoup(response.text, 'html.parser'))
-        item_list = json_data['itemListElement']
-        print("Registered items with pagination --> ", url)
-        if item_list == last_response:
+        if json_data == last_response:
             indicator = False
-        last_response = item_list
+            if not indicator:
+                break
+        #print("Registered items with pagination --> ", url)
+        last_response = json_data
+        for element in json_data:
+            itemListElement.append(element)
         url = re.sub(r'=(\d+)', lambda m: f"={int(m.group(1)) + 1}", url)
 
-    return
+    return itemListElement
 
 
 
