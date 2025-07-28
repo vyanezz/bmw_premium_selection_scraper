@@ -73,6 +73,7 @@ xxxxxxx,https://www.bmwpremiumselection.es/xxxxxxxx,xx
 
 ## Features coming soon
 
+- Resolve the error that arises when there are no results in the search and unfiltered models are returned
 - New params to search
 - Store dates to record changes over time
 - Containerize the application using Docker
