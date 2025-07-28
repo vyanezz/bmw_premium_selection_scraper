@@ -46,7 +46,7 @@ receiver_emails=xxxx
 ```
 
 
-In the input file ```input_search.csv``` you can set yor search. For fields without filter set "_".
+To learn about the path structure or request parameters, it is recommended to first visit bmwpremiumselection.es. In the input file ```input_search.csv``` you can set yor search. For fields without filter set "_".
 
 ```python
 model,motor,price,kms,email
@@ -74,7 +74,8 @@ xxxxxxx,https://www.bmwpremiumselection.es/xxxxxxxx,xx
 ## Features coming soon
 
 - New params to search
-- Pagination for scrape number of vehicles
+- Store dates to record changes over time
+- Containerize the application using Docker
 - Scrape more data like kms/fuel
 - Scrape for specific countries/provinces
 - New forms of notification
