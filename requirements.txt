@@ -3,3 +3,4 @@ pandas~=2.1.4
 beautifulsoup4~=4.12.2
 pytest~=7.4.2
 python-dotenv~=1.0.0
+pyfiglet
