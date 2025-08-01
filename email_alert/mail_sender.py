@@ -18,5 +18,7 @@ class mail:
         return check
 
     def sendMessage(self):
-        self.server.sendmail(self.sender, self.receiver, self.message.as_string())
+        receivers = self.receiver.split(',')
+        for receiver in receivers:
+            self.server.sendmail(self.sender, receiver.strip(), self.message.as_string())
 
