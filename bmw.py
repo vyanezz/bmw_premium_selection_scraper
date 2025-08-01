@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-import json
 from email_alert.mail_data import prepare_mail
 from email.mime.text import MIMEText
 import pandas as pd
@@ -56,7 +55,7 @@ def scrape_alert(url, email=None):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    json_data = correct_json(soup)
+    json_data = functions.correct_json(soup)
 
     if json_data:
 
@@ -187,14 +186,6 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
         else:
             raise ValueError("Mandatory filters like motor or model cannot be empty")
 
-def correct_json(soup):
-    try:
-        script_tag = soup.find('script', {'type': 'application/ld+json'}).string
-        json_ok = functions.add_commas_to_json_list(script_tag)
-        json_data = json.loads(json_ok)
-        return json_data['itemListElement']
-    except json.JSONDecodeError as e:
-        print(f'Error decoding JSON: {e}')
 
 def get_pagination_items(url, first_result):
 
@@ -208,7 +199,7 @@ def get_pagination_items(url, first_result):
 
     while indicator:
         response = requests.get(url)
-        json_data =  correct_json(BeautifulSoup(response.text, 'html.parser'))
+        json_data =  functions.correct_json(BeautifulSoup(response.text, 'html.parser'))
         if json_data == last_response:
             indicator = False
             if not indicator:
