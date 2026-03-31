@@ -10,11 +10,9 @@ search = df.values
 
 def main():
     for car in search:
-        url_constructor(model=car[0], motor=car[1], price=car[2], kms=car[3], email=car[4])
+        url_constructor(model=car[0], motor=car[1], price=car[2], kms=car[3], after_year=car[4], before_year=car[5], email=car[6])
 
 
 if __name__ == "__main__":
-    logo.print_bmw_ascii_with_small_by()
+    logo.print_start_logo()
     main()
-
-

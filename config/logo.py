@@ -1,6 +1,6 @@
 import pyfiglet
 
-def print_bmw_ascii_with_small_by():
+def print_start_logo():
     bmw_lines = pyfiglet.figlet_format("BMW Scraper", font="big").splitlines()
     by_text = "by vyanezz"
 

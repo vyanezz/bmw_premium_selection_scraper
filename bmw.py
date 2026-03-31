@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import json
 from email_alert.mail_data import prepare_mail
 from email.mime.text import MIMEText
 import pandas as pd
@@ -46,7 +47,26 @@ def check_price_changes(id, car_price, url, email=None):
             notify_changes(price_changes)
 
 
-def scrape_alert(url, email=None):
+def get_filtered_list(item_list, model, motor, on_pagination=False):
+    filtered_list = []
+
+    for item in item_list:
+        url = item.get('url', '')
+
+        url_lower = url.lower()
+        model_lower = model.lower()
+        motor_lower = motor.lower()
+
+        if model_lower in url_lower and motor_lower in url_lower:
+            filtered_list.append(item)
+
+    if not filtered_list and not on_pagination:
+        print(f"No results for {model} - {motor}")
+
+    return filtered_list
+
+
+def scrape_alert(url, model, motor, email=None):
     global news
 
     print("Requested URL --> ", url)
@@ -55,13 +75,17 @@ def scrape_alert(url, email=None):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    json_data = functions.correct_json(soup)
+    json_data = correct_json(soup)
 
-    if json_data:
+    filtered_list = get_filtered_list(json_data, model, motor)
+
+    if filtered_list:
 
         more_items = get_pagination_items(url, json_data)
 
-        item_list = json_data + more_items
+        filtered_pagination_items_list = get_filtered_list(more_items, model, motor, on_pagination=True)
+
+        item_list = filtered_list + filtered_pagination_items_list
 
         for item in item_list:
             url = item.get('url', '')
@@ -86,7 +110,6 @@ def scrape_alert(url, email=None):
                     check_price_changes(id, car_price, url, email)
             except ValueError as e:
                 print(f"{e}")
-
 
     if news and email:
         body = "News:\n\n"
@@ -123,10 +146,10 @@ def scrape_prices(url):
         return price
 
 
-def url_constructor(model, motor, price=None, kms=None, email=None):
+def url_constructor(model, motor, price=None, kms=None, after_year=None, before_year=None, email=None):
     spain_url = "https://www.bmwpremiumselection.es"
 
-    if price or kms:
+    if price or kms or before_year or after_year:
 
         params = []
 
@@ -137,6 +160,15 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
         if kms:
             kms_param = f"&condicion%5Bkm_hasta%5D={kms}"
             params.append(kms_param)
+
+        if after_year:
+            after_year_param = f"&condicion%5Bfecha_version_desde%5D={after_year}"
+            params.append(after_year_param)
+
+        if before_year:
+            before_year_param = f"&condicion%5Bfecha_version_hasta%5D={before_year}"
+            params.append(before_year_param)
+
 
         filters = [model, motor]
 
@@ -159,7 +191,8 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
             else:
                 spain_url += "&" + param
 
-        return scrape_alert(spain_url, email)
+        scrape_alert(spain_url, model, motor, email)
+
 
     else:
         filters = [model, motor]
@@ -181,14 +214,23 @@ def url_constructor(model, motor, price=None, kms=None, email=None):
             for cap in captured_filters:
                 spain_url += cap
 
-            return scrape_alert(spain_url, email)
+            scrape_alert(spain_url, model, motor, email)
 
         else:
             raise ValueError("Mandatory filters like motor or model cannot be empty")
 
 
-def get_pagination_items(url, first_result):
+def correct_json(soup):
+    try:
+        script_tag = soup.find('script', {'type': 'application/ld+json'}).string
+        json_ok = functions.add_commas_to_json_list(script_tag)
+        json_data = json.loads(json_ok)
+        return json_data['itemListElement']
+    except json.JSONDecodeError as e:
+        print(f'Error decoding JSON: {e}')
 
+
+def get_pagination_items(url, first_result):
     url = url + '/?pagina=2&ordenacion=fecha_publicacion_descendente'
 
     indicator = True
@@ -199,19 +241,15 @@ def get_pagination_items(url, first_result):
 
     while indicator:
         response = requests.get(url)
-        json_data =  functions.correct_json(BeautifulSoup(response.text, 'html.parser'))
+        json_data = correct_json(BeautifulSoup(response.text, 'html.parser'))
         if json_data == last_response:
             indicator = False
             if not indicator:
                 break
-        #print("Registered items with pagination --> ", url)
+        # print("Registered items with pagination --> ", url)
         last_response = json_data
         for element in json_data:
             itemListElement.append(element)
         url = re.sub(r'=(\d+)', lambda m: f"={int(m.group(1)) + 1}", url)
 
     return itemListElement
-
-
-
-
