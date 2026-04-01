@@ -1,2 +1,2 @@
-model,motor,price,kms,email
-serie-2,218i-active-tourer,_,_,False
+model,motor,price,kms,after_year,before_year,email
+serie-1,120i,_,_,_,_,False
