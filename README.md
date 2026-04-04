@@ -1,8 +1,11 @@
 
 # BMW Premium Selection Scraper
 
-Scraper for pre-owned vehicles at BMW dealerships. The project has been created for purely educational purposes.
+Scraper for used vehicles at BMW dealerships in Spain.
 
+The target page is https://www.bmwpremiumselection.es
+
+This project was created for purely educational purposes.
 ## What it can do
 
 The script allows you to add a specific search model with filters and receive notifications about new vehicles for sale.
@@ -46,13 +49,12 @@ receiver_emails=xxxx
 ```
 
 
-To learn about the path structure or request parameters, it is recommended to first visit bmwpremiumselection.es. In the input file ```input_search.csv``` you can set yor search. For fields without filter set "_".
+In the input file ```input_search.csv``` you can set yor search. For fields without filter set "_".
 
 ```python
-model,motor,price,kms,email
-serie-1,128ti,_,_,True
-serie-3,320i,_,_,True
-
+model,motor,price,kms,after_year,before_year,email
+serie-1,128ti,_,_,2025,_,False
+serie-3,320i,30000,_,_,_,True
 ```
 
 The email value can be set to ```True``` or ```False``` to receive or not receive news alerts.
