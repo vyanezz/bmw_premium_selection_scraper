@@ -38,7 +38,7 @@ def check_price_changes(id, car_price, url, email=None):
 
     price_difference = csv_price - car_price
 
-    if price_difference > 0.600 or price_difference < -0.600 and price_difference != 0.0:
+    if abs(price_difference) > 600 and price_difference != 0.0:
         price_changes[url] = {"previous_price": csv_price, "car_price": car_price}
         df.loc[idx, 'car_price'] = car_price
         df.to_csv('data.csv', index=False)
@@ -140,9 +140,8 @@ def scrape_prices(url):
         raise ValueError(f"Cannot scrape {url}")
     else:
         soup = BeautifulSoup(responseURL.text, 'html.parser')
-        car_price = soup.find('div', class_='datePrice')
-        str_price = car_price.find('span').text
-        price = float(str_price[:-2].replace(",", ""))
+        car_price = soup.select_one('div.scl-precio__col--cash span.scl-precio__value').get_text(strip=True)
+        price = float(car_price.replace(".", "")[:-2])
         return price
 
 
